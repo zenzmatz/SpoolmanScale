@@ -106,6 +106,7 @@ const char* const STRINGS[STR_COUNT][2] = {
   { "Faktor: %.4f",           "Factor: %.4f"      },  // STR_BTN_CAL_SUB
   { "Beutelgewicht",          "Bag weight"        },  // STR_BTN_BAGWEIGHT
   { "Aktuell: %.1fg",         "Current: %.1fg"    },  // STR_BTN_BAG_SUB
+  { "Beutel-UI",              "Bag UI"            },  // STR_BTN_BAG_UI
 
   // Calibration
   { "Kalibrierung",           "Calibration"       },  // STR_CAL_TITLE

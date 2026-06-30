@@ -104,6 +104,7 @@ enum StringID {
   STR_BTN_CAL_SUB,
   STR_BTN_BAGWEIGHT,
   STR_BTN_BAG_SUB,
+  STR_BTN_BAG_UI,
 
   // Calibration
   STR_CAL_TITLE,
