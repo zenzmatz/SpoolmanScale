@@ -10112,7 +10112,6 @@ void setup() {
     while (!nau.calibrate(NAU7802_CALMOD_INTERNAL)) {
       Serial.print(".");
       delay(100);
-      lv_tick_inc(100);
       lv_timer_handler();  // keep display alive during calibration
     }
     scale_ready = true;
@@ -10152,7 +10151,6 @@ unsigned long last_counter_ms = 0;
 int loop_count = 0;
 
 void loop() {
-  lv_tick_inc(5);
   lv_timer_handler();
   handlePowerManagement();
 
