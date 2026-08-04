@@ -132,6 +132,7 @@ void clearTagDisplay();
 void updateLinkButton();
 static void clearResolvedSpoolState();
 void syncNTP();
+String getCurrentLocalISO8601();
 void saveSpoolmanIP(const char* ip);
 void saveSpoolmanToken(const char* token);
 void saveSpoolmanCode(const char* code);
@@ -5899,12 +5900,14 @@ void patchSpoolmanWeight(float remaining) {
   http.setTimeout(5000);
   char body[128];
   if (last_used_mode == 1) {
-    // Mode: Last Weighed — also write last_used = today
-    char today[12];
-    time_t now = time(nullptr);
-    struct tm *t = localtime(&now);
-    snprintf(today, sizeof(today), "%04d-%02d-%02d", t->tm_year+1900, t->tm_mon+1, t->tm_mday);
-    snprintf(body, sizeof(body), "{\"remaining_weight\": %.1f, \"last_used\": \"%s\"}", remaining, today);
+    // Mode: Last Weighed — record the exact local measurement time with UTC offset.
+    String last_used = getCurrentLocalISO8601();
+    if (last_used.length() > 0) {
+      snprintf(body, sizeof(body), "{\"remaining_weight\": %.1f, \"last_used\": \"%s\"}", remaining, last_used.c_str());
+    } else {
+      // Never overwrite Spoolman's timestamp with a fabricated date if NTP is unavailable.
+      snprintf(body, sizeof(body), "{\"remaining_weight\": %.1f}", remaining);
+    }
   } else {
     snprintf(body, sizeof(body), "{\"remaining_weight\": %.1f}", remaining);
   }
@@ -5921,18 +5924,17 @@ void patchSpoolmanWeight(float remaining) {
     lv_label_set_text(lbl_spoolman_pct, p_str);
     // Update last_used display if in Last Weighed mode
     if (last_used_mode == 1 && lbl_last_used) {
-      char today_iso[12];
-      time_t now = time(nullptr);
-      struct tm *t = localtime(&now);
-      snprintf(today_iso, sizeof(today_iso), "%04d-%02d-%02d", t->tm_year+1900, t->tm_mon+1, t->tm_mday);
-      // Also update sm_last_used so querySpoolman won't overwrite on next scan
-      // sm_last_used stores the local-format date (like querySpoolman does)
-      char today_local[12];
-      isoToDe(today_iso, today_local, sizeof(today_local));
-      strncpy(sm_last_used, today_local, sizeof(sm_last_used)-1);
-      char disp[48];
-      driedDisplayStr(today_local, disp, sizeof(disp));
-      lv_label_set_text(lbl_last_used, disp);
+      String last_used = getCurrentLocalISO8601();
+      if (last_used.length() >= 10) {
+        // sm_last_used stores the local-format date (like querySpoolman does).
+        char today_local[12];
+        isoToDe(last_used.substring(0, 10).c_str(), today_local, sizeof(today_local));
+        strncpy(sm_last_used, today_local, sizeof(sm_last_used)-1);
+        sm_last_used[sizeof(sm_last_used)-1] = '\0';
+        char disp[48];
+        driedDisplayStr(today_local, disp, sizeof(disp));
+        lv_label_set_text(lbl_last_used, disp);
+      }
     }
     Serial.printf("OK: %.1fg saved\n", remaining);
   } else {
@@ -9223,7 +9225,7 @@ static int dryingAlertLevel(const char* last_dried_local) {
 
 // Sync NTP time (after WiFi connection)
 void syncNTP() {
-  configTime(3600, 3600, "pool.ntp.org", "time.nist.gov"); // UTC+1 + Sommerzeit
+  configTzTime("CET-1CEST,M3.5.0,M10.5.0/3", "pool.ntp.org", "time.nist.gov");
   Serial.print("NTP sync...");
   struct tm ti;
   for (int i = 0; i < 20; i++) {
@@ -9243,6 +9245,38 @@ String getTodayISO() {
   if (!getLocalTime(&ti)) return "2026-01-01";
   char buf[16];
   snprintf(buf, sizeof(buf), "%04d-%02d-%02d", ti.tm_year+1900, ti.tm_mon+1, ti.tm_mday);
+  return String(buf);
+}
+
+// Current local time in ISO 8601, including the actual CET/CEST UTC offset.
+String getCurrentLocalISO8601() {
+  time_t now = time(nullptr);
+  struct tm local_time;
+  struct tm utc_time;
+  if (!getLocalTime(&local_time)) return "";
+  gmtime_r(&now, &utc_time);
+
+  // mktime interprets both structures as local time, making the difference the UTC offset.
+  long offset_seconds = static_cast<long>(difftime(mktime(&local_time), mktime(&utc_time)));
+  int offset_minutes = static_cast<int>(offset_seconds / 60);
+  char sign = offset_minutes < 0 ? '-' : '+';
+  offset_minutes = abs(offset_minutes);
+
+  char buf[32];
+  snprintf(
+    buf,
+    sizeof(buf),
+    "%04d-%02d-%02dT%02d:%02d:%02d%c%02d:%02d",
+    local_time.tm_year + 1900,
+    local_time.tm_mon + 1,
+    local_time.tm_mday,
+    local_time.tm_hour,
+    local_time.tm_min,
+    local_time.tm_sec,
+    sign,
+    offset_minutes / 60,
+    offset_minutes % 60
+  );
   return String(buf);
 }
 
