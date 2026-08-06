@@ -46,7 +46,7 @@ jobs:
         run: |
           VERSION=${{ steps.version.outputs.version }}
           sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" manifest.json
-          sed -i "s/Firmware v[0-9]*\.[0-9]*\.[0-9]*-beta/Firmware $VERSION/" index.html
+          sed -Ei "s/Firmware v[^< ]*/Firmware $VERSION/" index.html
       - name: Commit webflasher + manifest + index
         run: |
           git config user.name  "github-actions[bot]"

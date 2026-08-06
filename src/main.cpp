@@ -195,7 +195,7 @@ int     bright_normal   = BRIGHT_NORMAL_DEFAULT;
 int     dim_timeout_ms  = DIM_TIMEOUT_DEFAULT;
 int     sleep_timeout_ms = SLEEP_TIMEOUT_DEFAULT;
 #define TOUCH_INT_PIN       7   // FT6336U INT fuer Wake-Up
-#define FW_VERSION  "v0.5.12-beta"
+#define FW_VERSION  "v1.0.0-zenzmatz.1"
 #define DONATION_URL "ko-fi.com/formfollowsfunction"
 
 // NAU7802 calibration
@@ -4093,7 +4093,7 @@ void startOtaServer() {
       "<div class='links' style='margin-bottom:20px'>"
       "<a class='link-btn link-kofi' href='https://ko-fi.com/formfollowsfunction' target='_blank'>"
       "&#9749; Ko-fi</a>"
-      "<a class='link-btn link-github' href='https://github.com/Niko11111/SpoolmanScale' target='_blank'>"
+      "<a class='link-btn link-github' href='https://github.com/zenzmatz/SpoolmanScale' target='_blank'>"
       "&#9873; GitHub</a>"
       "<a class='link-btn link-discord' href='https://discord.gg/GzQzGa5pBG' target='_blank'>"
       "&#128172; Discord</a>"
@@ -4863,8 +4863,8 @@ void doGithubOtaCheckSilent() {
   HTTPClient http;
   // Pre-release mode: fetch all releases array; normal: fetch latest only
   String url = gh_prerelease
-    ? "https://api.github.com/repos/Niko11111/SpoolmanScale/releases"
-    : "https://api.github.com/repos/Niko11111/SpoolmanScale/releases/latest";
+    ? "https://api.github.com/repos/zenzmatz/SpoolmanScale/releases"
+    : "https://api.github.com/repos/zenzmatz/SpoolmanScale/releases/latest";
   http.begin(client, url);
   http.addHeader("User-Agent", "SpoolmanScale-ESP32");
   http.setTimeout(8000);
@@ -4928,8 +4928,8 @@ void doGithubOtaCheck() {
   client.setInsecure();  // skip cert check — connection is still encrypted
   HTTPClient http;
   String url = gh_prerelease
-    ? "https://api.github.com/repos/Niko11111/SpoolmanScale/releases"
-    : "https://api.github.com/repos/Niko11111/SpoolmanScale/releases/latest";
+    ? "https://api.github.com/repos/zenzmatz/SpoolmanScale/releases"
+    : "https://api.github.com/repos/zenzmatz/SpoolmanScale/releases/latest";
   http.begin(client, url);
   http.addHeader("User-Agent", "SpoolmanScale-ESP32");
   http.setTimeout(8000);
@@ -5073,8 +5073,10 @@ void doGithubOtaFlash(const char* version) {
   client.setInsecure();
   HTTPClient http;
 
-  // GitHub Releases /latest/download/ redirects automatically
-  String url = "https://github.com/Niko11111/SpoolmanScale/releases/latest/download/SpoolmanScale.bin";
+  // Download the checked release directly so prerelease selection is respected.
+  String url = "https://github.com/zenzmatz/SpoolmanScale/releases/download/";
+  url += version;
+  url += "/SpoolmanScale.bin";
   http.begin(client, url);
   http.addHeader("User-Agent", "SpoolmanScale-ESP32");
   http.setTimeout(60000);
@@ -5545,13 +5547,13 @@ static lv_obj_t *scr_info = nullptr;
 static const char* QR_TITLES[] = { "Ko-fi", "GitHub", "Discord", "MakerWorld" };
 static const char* QR_URLS[]   = {
   "https://ko-fi.com/formfollowsfunction",
-  "https://github.com/Niko11111/SpoolmanScale",
+  "https://github.com/zenzmatz/SpoolmanScale",
   "https://discord.gg/GzQzGa5pBG",
   "https://makerworld.com/de/@FormFollowsF/upload"
 };
 static const char* QR_URLS_DISPLAY[] = {
   "ko-fi.com/formfollowsfunction",
-  "github.com/Niko11111/SpoolmanScale",
+  "github.com/zenzmatz/SpoolmanScale",
   "discord.gg/GzQzGa5pBG",
   "makerworld.com/de/@FormFollowsF/upload"
 };
