@@ -195,7 +195,7 @@ int     bright_normal   = BRIGHT_NORMAL_DEFAULT;
 int     dim_timeout_ms  = DIM_TIMEOUT_DEFAULT;
 int     sleep_timeout_ms = SLEEP_TIMEOUT_DEFAULT;
 #define TOUCH_INT_PIN       7   // FT6336U INT fuer Wake-Up
-#define FW_VERSION  "v1.0.0-zenzmatz.1"
+#define FW_VERSION  "v1.0.1-zenzmatz.1"
 #define DONATION_URL "ko-fi.com/formfollowsfunction"
 
 // NAU7802 calibration

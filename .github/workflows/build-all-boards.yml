@@ -60,7 +60,7 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           name: SpoolmanScale ${{ steps.version.outputs.version }}
-          prerelease: true
+          prerelease: false
           files: |
             webflasher/SpoolmanScale.bin
             SpoolmanScale_${{ steps.version.outputs.version }}.bin
