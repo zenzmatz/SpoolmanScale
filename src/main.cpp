@@ -195,7 +195,7 @@ int     bright_normal   = BRIGHT_NORMAL_DEFAULT;
 int     dim_timeout_ms  = DIM_TIMEOUT_DEFAULT;
 int     sleep_timeout_ms = SLEEP_TIMEOUT_DEFAULT;
 #define TOUCH_INT_PIN       7   // FT6336U INT fuer Wake-Up
-#define FW_VERSION  "v1.0.2-zenzmatz.1"
+#define FW_VERSION  "v1.0.3-zenzmatz.1"
 #define DONATION_URL "ko-fi.com/formfollowsfunction"
 
 // NAU7802 calibration
@@ -10149,6 +10149,7 @@ void setup() {
     while (!nau.calibrate(NAU7802_CALMOD_INTERNAL)) {
       Serial.print(".");
       delay(100);
+      lv_tick_inc(100);
       lv_timer_handler();  // keep display alive during calibration
       if (millis() - calibration_started >= 5000) {
         scl_ok = false;
@@ -10196,6 +10197,7 @@ unsigned long last_counter_ms = 0;
 int loop_count = 0;
 
 void loop() {
+  lv_tick_inc(5);
   lv_timer_handler();
   handlePowerManagement();
 
