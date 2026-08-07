@@ -195,7 +195,7 @@ int     bright_normal   = BRIGHT_NORMAL_DEFAULT;
 int     dim_timeout_ms  = DIM_TIMEOUT_DEFAULT;
 int     sleep_timeout_ms = SLEEP_TIMEOUT_DEFAULT;
 #define TOUCH_INT_PIN       7   // FT6336U INT fuer Wake-Up
-#define FW_VERSION  "v1.0.3-zenzmatz.1"
+#define FW_VERSION  "v1.0.4-zenzmatz.1"
 #define DONATION_URL "ko-fi.com/formfollowsfunction"
 
 // NAU7802 calibration
@@ -493,7 +493,7 @@ static int  g_dry_mat_red[7];
 static bool g_dry_mat_sealed[7];        // pro Material: luftdicht gelagert (Multiplikator aktiv)
 static float g_dry_mult_sealed = 2.0f;  // Multiplikator fuer luftdichte Lagerung, editierbar via Webserver
 int  g_loc_popup_shown_for_id = -1;         // sm_id for which loc popup was last shown
-bool g_loc_picker_from_popup = false;        // true = picker opened from tag-removal popup
+bool g_loc_picker_from_popup = false;        // true = picker returns to main screen
 static int  loc_popup_pending_id = -1;              // debounced popup: sm_id scheduled, fires after 1500ms
 static float auto_weight_last_val = -9999.0f;    // letzter Vergleichswert
 static unsigned long auto_weight_stable_ms = 0;  // Zeitpunkt, seit dem stabil
@@ -628,7 +628,7 @@ lv_obj_t *lbl_bag_cap = nullptr; // Zone 4: bag-free caption
 lv_obj_t *lbl_bag_sm_diff = nullptr; // Zone 4: ohne-Beutel vs SM diff
 
 // Mainscreen buttons (global for show/hide depending on sm_found)
-lv_obj_t *btn_dried  = nullptr;  // "Dried today" — visible when sm_found
+lv_obj_t *btn_dried  = nullptr;  // Location — visible when a Spoolman spool is found
 lv_obj_t *btn_link   = nullptr;  // "Link"             — visible when !sm_found && tag_present
 lv_obj_t *btn_weight_main = nullptr;  // "Update Weight" — always visible when sm_found
 
@@ -6889,7 +6889,7 @@ void updateHeaderStatus() {
 //  Zone 2: Status      y=26..47  (22px)  dot + status text | #scans
 //  Zone 3: Spool Info  y=48..183 (136px) full width: swatch/id/mat/name | vendor/temp | dates/more
 //  Zone 4: Weights     y=184..263 (80px) Spoolman(+bar) | Scale(+diff) | TARE btn
-//  Zone 5: Buttons     y=264..319 (56px) [Update Weight] [Dried today] [Settings]
+//  Zone 5: Buttons     y=264..319 (56px) [Update Weight] [Location] [Settings]
 // ============================================================
 void buildUI() {
   lv_obj_set_style_bg_color(lv_scr_act(), lv_color_hex(0x0a1020), 0);
@@ -7394,7 +7394,7 @@ void buildUI() {
   lv_obj_set_style_text_align(lbl_wm, LV_TEXT_ALIGN_CENTER, 0);
   lv_obj_align(lbl_wm, LV_ALIGN_CENTER, 0, 0);
 
-  // "Dried today" button (x=216, w=204)
+  // "Location" button (x=216, w=204)
   btn_dried = lv_btn_create(btn_bar);
   lv_obj_set_size(btn_dried, 204, 40);
   lv_obj_set_pos(btn_dried, 216, 8);
@@ -7405,13 +7405,14 @@ void buildUI() {
   lv_obj_set_style_radius(btn_dried, 8, 0);
   lv_obj_set_style_shadow_width(btn_dried, 0, 0);
   lv_obj_add_event_cb(btn_dried, [](lv_event_t *e) {
-    logSD("UI: Button -> Dried (popup)");
-    if (!sm_found || sm_id == 0) { btn_dried_cb(nullptr); return; }
-    showConfirmPopup(T(STR_POPUP_DRIED_Q), 1);
+    logSD("UI: Button -> Location");
+    if (!backendSupportsLocationPickerUi() || !sm_found || sm_id <= 0) return;
+    g_loc_picker_from_popup = true;
+    show_location_picker_pending = true;
   }, LV_EVENT_CLICKED, NULL);
   lv_obj_t *lbl_dr = lv_label_create(btn_dried);
-  lv_label_set_text(lbl_dr, T(STR_BTN_DRIED));
-  lv_obj_set_style_text_color(lbl_dr, lv_color_hex(0x5090e0), 0);
+  lv_label_set_text(lbl_dr, T(STR_BTN_LOCATION));
+  lv_obj_set_style_text_color(lbl_dr, lv_color_hex(0x28d49a), 0);
   lv_obj_set_style_text_font(lbl_dr, &lv_font_montserrat_ext_16, 0);
   lv_obj_set_style_text_align(lbl_dr, LV_TEXT_ALIGN_CENTER, 0);
   lv_obj_align(lbl_dr, LV_ALIGN_CENTER, 0, 0);
@@ -7502,7 +7503,7 @@ void buildUI() {
 
 // ============================================================
 //  MAINSCREEN: UPDATE BUTTON VISIBILITY
-//  btn_dried visible when spool known, btn_link when unknown + tag present
+//  btn_dried (Location) visible when spool known, btn_link when unknown + tag present
 // ============================================================
 void updateLinkButton() {
   if (!btn_dried || !btn_link || !btn_weight_main || !btn_copy) return;
@@ -7523,7 +7524,7 @@ void updateLinkButton() {
   }
 
   if (tag_present && !sm_found && can_link_current_tag) {
-    // Tag present but not linked: show Link + Copy, hide Weight+Dried
+    // Tag present but not linked: show Link + Copy, hide Weight+Location
     lv_obj_add_flag(btn_weight_main,   LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(btn_dried,         LV_OBJ_FLAG_HIDDEN);
     lv_obj_clear_flag(btn_link,        LV_OBJ_FLAG_HIDDEN);
@@ -7535,7 +7536,7 @@ void updateLinkButton() {
     lv_obj_add_flag(btn_link,          LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(btn_copy,          LV_OBJ_FLAG_HIDDEN);
   } else {
-    // No tag, or tag linked: show Weight+Dried, hide Link+Copy
+    // No tag, or tag linked: show Weight+Location, hide Link+Copy
     lv_obj_clear_flag(btn_weight_main, LV_OBJ_FLAG_HIDDEN);
     lv_obj_clear_flag(btn_dried,       LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(btn_link,          LV_OBJ_FLAG_HIDDEN);
