@@ -4,6 +4,11 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing release tag matching FW_VERSION (for example, v1.0.4-zenzmatz.1)
+        required: true
+        type: string
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -35,6 +40,15 @@ jobs:
         run: |
           VERSION=$(grep '#define FW_VERSION' src/main.cpp | sed 's/.*"\(.*\)"/\1/')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+      - name: Validate release tag
+        id: release
+        run: |
+          TAG="${{ inputs.release_tag || github.ref_name }}"
+          if [ "$TAG" != "${{ steps.version.outputs.version }}" ]; then
+            echo "Release tag $TAG does not match FW_VERSION ${{ steps.version.outputs.version }}"
+            exit 1
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
       - name: Prepare binaries
         run: |
           VERSION=${{ steps.version.outputs.version }}
@@ -58,7 +72,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
+          tag_name: ${{ steps.release.outputs.tag }}
           name: SpoolmanScale ${{ steps.version.outputs.version }}
           prerelease: false
           files: |
